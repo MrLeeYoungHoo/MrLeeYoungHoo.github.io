@@ -65,7 +65,7 @@ vim docker-compose.yml
     volumes:
         - ./db:/var/lib/postgresql/data
     restart: unless-stopped
-</code></pre><p>修改好后键入<code>:wq</code>退出</p><h3 id=编辑env环境变量>编辑.env环境变量</h3><p>同文件夹下键入
+</code></pre><p>修改好后键入<code>:wq</code>按下回车退出</p><h3 id=编辑env环境变量>编辑.env环境变量</h3><p>同文件夹下键入
 <code>vim .env</code> 按<code>i</code>进入编辑模式</p><pre tabindex=0><code>VAULTWARDEN_ADMIN_TOKEN=
 DB_NAME=
 DB_USER=
@@ -82,7 +82,7 @@ SMTP_PASSWD=
 apt install nginx certbot python3-certbot-nginx
 </code></pre><p>创建配置文件
 <code>vim /etc/nginx/conf.d/vaultwarden.conf</code>
-按<code>i</code>进入编辑模式，wiki上有<a href=https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples>示例配置</a>,或者查看 <a href=https://rs.ppgg.in/deployment/proxy-examples>汉化版说明</a></p><p>用certbot申请ssl证书,以下二选一</p><ol><li>停止nginx<code>systemctl stop nginx</code>后运行<code>certbot certonly --standalone -d example.com</code>然后再去配置文件中指定ssl证书文件位置，再<code>systemctl restart nginx</code>重启nginx</li><li>不停止nginx，将配置文件的server块改成只监听80端口，让certbot自动设置你的ssl证书位置<code>certbot --nginx -d example.com</code></li></ol><p>我使用第二种，下面是示例配置：</p><p><code>/etc/nginx/conf.d</code>文件夹下的<code>vaultwarden.conf</code>:</p><pre tabindex=0><code>server {
+按<code>i</code>进入编辑模式，wiki上有<a href=https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples>示例配置</a>,或者查看 <a href=https://rs.ppgg.in/deployment/proxy-examples>汉化版说明</a></p><p>用certbot申请ssl证书,以下二选一</p><ol><li>停止nginx(<code>systemctl stop nginx</code>)后运行<code>certbot certonly --standalone -d example.com</code>然后再去配置文件中指定ssl证书文件位置，再运行<code>systemctl restart nginx</code>重启nginx</li><li>不停止nginx，将配置文件的server块改成只监听80端口，让certbot自动设置你的ssl证书位置，执行<code>certbot --nginx -d example.com</code></li></ol><p>我使用第二种，下面是示例配置：</p><p><code>/etc/nginx/conf.d</code>文件夹下的<code>vaultwarden.conf</code>:</p><pre tabindex=0><code>server {
     listen 80;
     listen [::]:80;
     server_name example.com;
@@ -104,7 +104,7 @@ location / {
       #add_header Alt-Svc &#39;h3=&#34;:443&#34;; ma=86400&#39;;
   }
 }
-</code></pre><p>执行<code>certbot --nginx -d example.com</code>后如果没有报错那就是已经设置上了，这时候再查看这个配置会发现被certbot自动增加上了ssl部分，打开浏览器访问你的网页吧。
+</code></pre><p>编辑好后，执行<code>certbot --nginx -d example.com</code>后如果没有报错那就是已经设置上了，这时候再查看这个配置会发现被certbot自动增加上了ssl部分，打开浏览器访问你的网页吧。
 到此为止基本的安装结束了。</p><h2 id=配置fail2ban>配置fail2ban</h2><p>fail2ban可以直接照汉化过的<a href=https://rs.ppgg.in/configuration/security/fail2ban-setup>wiki</a>来。
 假设你按官方的wiki设置了一对filter与jail规则<code>vaultwarden.local</code>(按<code>wiki</code>在对应的文件夹创建对应的文件)，执行
 <code>fail2ban-client status vaultwarden</code>查看状态</p><h2 id=设置定时备份>设置定时备份</h2><p>打字打半天累了，有空再更新吧。</p><p>按 <code>停止容器---打包文件夹---上传打包好的包文件到要保存的地方(网盘、github仓库...)---重启容器</code> 的思路创建脚本定时执行就行了。</p></article><div class="tags pb-4 pt-2"><a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E5%A4%87%E5%BF%98%E5%BD%95/>备忘录</a>
