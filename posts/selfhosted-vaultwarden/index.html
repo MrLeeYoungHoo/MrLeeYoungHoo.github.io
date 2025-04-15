@@ -65,13 +65,13 @@ vim docker-compose.yml
     volumes:
         - ./db:/var/lib/postgresql/data
     restart: unless-stopped
-</code></pre><h3 id=编辑env环境变量>编辑.env环境变量</h3><p>同文件夹下键入
+</code></pre><p>修改好后键入<code>:wq</code>退出</p><h3 id=编辑env环境变量>编辑.env环境变量</h3><p>同文件夹下键入
 <code>vim .env</code> 按<code>i</code>进入编辑模式</p><pre tabindex=0><code>VAULTWARDEN_ADMIN_TOKEN=
 DB_NAME=
 DB_USER=
 DB_SECRET=
 SMTP_FROM=
-SMTP_USERNAME=${SMTP_USER}=
+SMTP_USERNAME=
 SMTP_PASSWD=
 </code></pre><p>建议各个值都用小引号<code>‘’</code>括起来，以及<code>VAULTWARDEN_ADMIN_TOKEN</code>要避免明文,参考<a href=https://github.com/dani-garcia/vaultwarden/wiki/Enabling-admin-page>官方wiki</a>，<a href=https://rs.ppgg.in/configuration/enabling-admin-page>中文版</a>。
 配置完成后在此文件夹下运行
