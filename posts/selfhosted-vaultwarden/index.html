@@ -82,7 +82,28 @@ SMTP_PASSWD=
 apt install nginx certbot python3-certbot-nginx
 </code></pre><p>创建配置文件
 <code>vim /etc/nginx/conf.d/vaultwarden.conf</code>
-按<code>i</code>进入编辑模式，wiki上有<a href=https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples>示例配置</a>,或者查看 <a href=https://rs.ppgg.in/deployment/proxy-examples>汉化版说明</a></p><p>用certbot申请ssl证书,以下二选一</p><ol><li>停止nginx<code>systemctl stop nginx</code>后运行<code>certbot certonly --standalone -d example.com</code>然后再去配置文件中指定ssl证书文件位置，再<code>systemctl restart nginx</code>重启nginx</li><li>不停止nginx，将配置文件的server块改成只监听80端口，让certbot自动设置你的ssl证书位置<code>certbot --nginx -d example.com</code></li></ol><p>我使用第二种下面是示例配置：</p><pre tabindex=0><code>懒得编辑，后期再更新
+按<code>i</code>进入编辑模式，wiki上有<a href=https://github.com/dani-garcia/vaultwarden/wiki/Proxy-examples>示例配置</a>,或者查看 <a href=https://rs.ppgg.in/deployment/proxy-examples>汉化版说明</a></p><p>用certbot申请ssl证书,以下二选一</p><ol><li>停止nginx<code>systemctl stop nginx</code>后运行<code>certbot certonly --standalone -d example.com</code>然后再去配置文件中指定ssl证书文件位置，再<code>systemctl restart nginx</code>重启nginx</li><li>不停止nginx，将配置文件的server块改成只监听80端口，让certbot自动设置你的ssl证书位置<code>certbot --nginx -d example.com</code></li></ol><p>我使用第二种，下面是示例配置：</p><p><code>/etc/nginx/conf.d</code>文件夹下的<code>vaultwarden.conf</code>:</p><pre tabindex=0><code>server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com;
+
+
+
+    client_max_body_size 525M;
+location / {
+      proxy_set_header   X-Real-IP $remote_addr;
+      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header   Host $host;
+      proxy_pass         http://localhost:8888/;
+      proxy_http_version 1.1;
+      proxy_set_header   Upgrade $http_upgrade;
+      proxy_set_header   Connection &#34;upgrade&#34;;
+      proxy_set_header X-Forwarded-Proto $scheme;
+
+      # proxy_cache my_proxy_cache;
+      #add_header Alt-Svc &#39;h3=&#34;:443&#34;; ma=86400&#39;;
+  }
+}
 </code></pre><p>如果没有报错那就是已经设置上了，打开自己的域名检查一下。
 到此为止基本的安装结束了。</p><h3 id=配置fail2ban>配置fail2ban</h3><p>今天累了，周天有空更新</p></article><div class="tags pb-4 pt-2"><a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E5%A4%87%E5%BF%98%E5%BD%95/>备忘录</a>
 <a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E8%87%AA%E9%83%A8%E7%BD%B2/>自部署</a>
