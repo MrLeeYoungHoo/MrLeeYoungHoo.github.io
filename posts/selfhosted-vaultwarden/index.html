@@ -100,8 +100,7 @@ location / {
       proxy_set_header   Connection &#34;upgrade&#34;;
       proxy_set_header X-Forwarded-Proto $scheme;
 
-      # proxy_cache my_proxy_cache;
-      #add_header Alt-Svc &#39;h3=&#34;:443&#34;; ma=86400&#39;;
+      
   }
 }
 </code></pre><p>编辑好后，执行<code>certbot --nginx -d example.com</code>后如果没有报错那就是已经设置上了，这时候再查看这个配置会发现被certbot自动增加上了ssl部分，打开浏览器访问你的网页吧。
