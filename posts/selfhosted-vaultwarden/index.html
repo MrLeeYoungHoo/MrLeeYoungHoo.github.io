@@ -75,8 +75,10 @@ vim docker-compose.yml
       - EXTENDED_LOGGING=true
         # - ENABLE_WEBSOCKET=false # 禁用websocket,建议别禁
         
+  
+  #使用你喜欢的数据库,postgres的话可用设置16或者17,我这个比较早以前弄得是15,最好固定版本
   db:
-    image: postgres:15  #使用你喜欢的数据库
+    image: postgres:15  
     container_name: postgres_vaultwarden
     environment:
         - POSTGRES_DB=${DB_NAME}
