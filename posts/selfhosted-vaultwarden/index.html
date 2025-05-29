@@ -1,46 +1,66 @@
 <!doctype html><html lang=en-us dir=ltr><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><link rel="shortcut icon" type=image/png href=https://MrLeeYoungHoo.github.io/favicon.ico><meta property="og:url" content="https://MrLeeYoungHoo.github.io/posts/selfhosted-vaultwarden/"><meta property="og:site_name" content="YEO'S BLOG"><meta property="og:title" content="在Debian12上用docker部署Vaultwarden"><meta property="og:description" content="租了一个腾讯云轻量挂vaultwarden，记录一下部署过程，到期后vps搬家重建可能用的到。"><meta property="og:locale" content="en_us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-04-15T17:35:25+08:00"><meta property="article:modified_time" content="2025-04-15T17:35:25+08:00"><meta property="article:tag" content="备忘录"><meta property="article:tag" content="自部署"><meta property="article:tag" content="Vaultwarden"><title>YEO'S BLOG | 在Debian12上用docker部署Vaultwarden</title>
-<link rel=stylesheet href=/css/main.min.698bc3e32b756e1f5322e47c0a024ef4fef02de7ddbc5af443455430b5482f03.css integrity="sha256-aYvD4yt1bh9TIuR8CgJO9P7wLefdvFr0Q0VUMLVILwM=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/catpuccin.min.a6f1bd4508a6b97805eeaaeb50fc8c575ad5fa2c430125dd9d003f2ea254600d.css integrity="sha256-pvG9RQimuXgF7qrrUPyMV1rV+ixDASXdnQA/LqJUYA0=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"><nav aria-label=breadcrumb class=small><ol class="breadcrumb fw-bold"><li class=breadcrumb-item><a href=/>home</a></li><li class=breadcrumb-item><a href=/about>about</a></li><li class=breadcrumb-item><a href=/posts class="text-decoration-underline link-offset-3">posts</a></li></ol></nav></div><div class="d-none d-lg-block position-fixed end-0 small toc"><p class=toc-title>Table of Contents:</p><nav id=TableOfContents><ul><li><a href=#前期准备>前期准备</a></li><li><a href=#开始部署>开始部署</a><ul><li><a href=#设定数据保存位置>设定数据保存位置</a></li><li><a href=#编辑配置docker-compose文件>编辑配置docker-compose文件</a></li><li><a href=#编辑env环境变量>编辑.env环境变量</a></li><li><a href=#配置反向代理>配置反向代理</a></li></ul></li><li><a href=#配置fail2ban>配置fail2ban</a></li><li><a href=#设置定时备份>设置定时备份</a></li></ul></nav></div><div class=post><header class=mb-4><h1 class=text-uppercase>在Debian12上用docker部署Vaultwarden</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-04-15T17:35:25+08:00>April 15, 2025</time></li><li class="breadcrumb-item small">2 minutes</li></ol></div></header><article><blockquote><p>大致步骤：</p><ol><li>在合适的位置创建文件夹保存<code>docker-compose.yml</code>文件和数据库数据</li><li>配置<code>docker-compose.yml</code>文件，配置好后运行 <code>docker compose up -d</code>运行服务</li><li>配置反向代理</li><li>配置fail2ban 防止密码管理器帐号被暴力破解</li><li>设置定时备份。</li></ol></blockquote><h2 id=前期准备>前期准备</h2><ul><li>一个vps服务器</li><li>一个域名，已经dns解析到服务器的ip地址(下文用<code>example.com</code>替代，自行替换成你自己的)</li></ul><h2 id=开始部署>开始部署</h2><h3 id=设定数据保存位置>设定数据保存位置</h3><p>我喜欢在<code>/home</code>文件夹存放docker容器的数据,因此创建并进入<code>/home/docker_apps/vaultwarden</code>文件夹:</p><pre tabindex=0><code>cd /home
+<link rel=stylesheet href=/css/main.min.698bc3e32b756e1f5322e47c0a024ef4fef02de7ddbc5af443455430b5482f03.css integrity="sha256-aYvD4yt1bh9TIuR8CgJO9P7wLefdvFr0Q0VUMLVILwM=" crossorigin=anonymous><link rel=stylesheet href=/css/palette/catpuccin.min.a6f1bd4508a6b97805eeaaeb50fc8c575ad5fa2c430125dd9d003f2ea254600d.css integrity="sha256-pvG9RQimuXgF7qrrUPyMV1rV+ixDASXdnQA/LqJUYA0=" crossorigin=anonymous><script src=/js/main.86bb3d8e6f46df0fc97c2731e6b99175a13b87a4086acf578ff9b6992fcf32c1.js integrity="sha256-hrs9jm9G3w/JfCcx5rmRdaE7h6QIas9Xj/m2mS/PMsE=" crossorigin=anonymous></script><link href=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css rel=stylesheet integrity=sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH crossorigin=anonymous></head><body class=dark><main><div class="container pt-5"><div class="row mt-5 pt-5"><nav aria-label=breadcrumb class=small><ol class="breadcrumb fw-bold"><li class=breadcrumb-item><a href=/>home</a></li><li class=breadcrumb-item><a href=/about>about</a></li><li class=breadcrumb-item><a href=/posts class="text-decoration-underline link-offset-3">posts</a></li></ol></nav></div><div class="d-none d-lg-block position-fixed end-0 small toc"><p class=toc-title>Table of Contents:</p><nav id=TableOfContents><ul><li><a href=#5月29日更新>5月29日更新</a></li><li><a href=#前期准备>前期准备</a></li><li><a href=#开始部署>开始部署</a><ul><li><a href=#设定数据保存位置>设定数据保存位置</a></li><li><a href=#编辑配置docker-composeyml文件>编辑配置<code>docker-compose.yml</code>文件</a></li><li><a href=#使用默认sqlite的docker-composeyml文件>使用默认<code>sqlite</code>的<code>docker-compose.yml</code>文件</a></li><li><a href=#编辑env环境变量>编辑<code>.env</code>环境变量</a></li><li><a href=#配置反向代理>配置反向代理</a></li></ul></li><li><a href=#配置fail2ban>配置<code>fail2ban</code></a><ul><li><a href=#设置网页端的fail2ban>设置网页端的<code>fail2ban</code></a></li><li><a href=#设置网页端admin管理界面的fail2ban>设置网页端<code>admin</code>管理界面的<code>fail2ban</code></a></li><li><a href=#totp的fail2ban设置用于vaultwarden帐号设置了二次验证的><code>TOTP</code>的<code>fail2ban</code>设置,用于<code>vaultwarden</code>帐号设置了二次验证的</a></li></ul></li><li><a href=#参考>参考</a></li></ul></nav></div><div class=post><header class=mb-4><h1 class=text-uppercase>在Debian12上用docker部署Vaultwarden</h1><div aria-label=breadcrumb><ol class=breadcrumb><li class="breadcrumb-item small"><time datetime=2025-04-15T17:35:25+08:00>April 15, 2025</time></li><li class="breadcrumb-item small">3 minutes</li></ol></div></header><article><h2 id=5月29日更新>5月29日更新</h2><ol><li>完善了<code>compose</code>文件配置的一部分解释，新增了用默认sqlite数据库的配置模板</li><li>使用<code>apt install fail2ban</code>安装的fail2ban的设置事宜</li></ol><hr><blockquote><p>大致步骤：</p><ol><li>在合适的位置创建文件夹保存<code>docker-compose.yml</code>文件和数据库数据</li><li>配置<code>docker-compose.yml</code>文件，配置好后运行 <code>docker compose up -d</code>运行服务</li><li>配置反向代理</li><li>配置fail2ban 防止密码管理器帐号被暴力破解</li></ol></blockquote><h2 id=前期准备>前期准备</h2><ul><li>一个vps服务器</li><li>一个域名，已经dns解析到服务器的ip地址(下文用<code>example.com</code>替代，自行替换成你自己的)</li></ul><h2 id=开始部署>开始部署</h2><h3 id=设定数据保存位置>设定数据保存位置</h3><p>我喜欢在<code>/home</code>文件夹存放docker容器的数据,因此创建并进入<code>/home/docker_apps/vaultwarden</code>文件夹:</p><pre tabindex=0><code>cd /home
 mkdir docker_apps docker_apps/vaultwarden
-</code></pre><p>进入刚刚创建的文件夹，创建<code>docker-compose.yml</code>文件并编辑(没有vim的要先安装，或者使用nano等其他文本编辑器)</p><pre tabindex=0><code>cd docker_apps/vaultwarden
+</code></pre><p>进入刚刚创建的文件夹，创建<code>docker-compose.yml</code>文件并编辑</p><pre tabindex=0><code>cd docker_apps/vaultwarden
 vim docker-compose.yml
-</code></pre><p>键入<code>i</code>进入编辑模式(左下角显示<code>--insert--</code>)</p><h3 id=编辑配置docker-compose文件>编辑配置docker-compose文件</h3><p>按照<a href=https://github.com/dani-garcia/vaultwarden/wiki>官方wiki</a>进行配置，或者查看<a href=https://rs.ppgg.in/configuration/configuration-overview>汉化版</a></p><p>我的<code>docker-compose.yml</code>文件(使用了postgresql数据库)：</p><pre tabindex=0><code>services:
+</code></pre><p>键入<code>i</code>进入编辑模式(左下角显示<code>--insert--</code>)</p><h3 id=编辑配置docker-composeyml文件>编辑配置<code>docker-compose.yml</code>文件</h3><p>按照<a href=https://github.com/dani-garcia/vaultwarden/wiki>官方wiki</a>进行配置，或者查看<a href=https://rs.ppgg.in/configuration/configuration-overview>汉化版</a></p><p>我的<code>docker-compose.yml</code>文件(使用了postgresql数据库)：</p><pre tabindex=0><code>services:
   vaultwarden:
     image: vaultwarden/server:latest
     container_name: vaultwarden
     volumes:
-      - ./vw-data/:/persistent/
-    # - ./vw-database/:/database/ #启用默认的数据库时启用,并注释掉下文的‘- DATABASE_URL=’,这里启用了postgresql就不启用了
+      - ./vw-data/:/persistent/ 
       - ./vw-attachments/:/attachments/
-      - /icon_cache/ # 按wiki的说法这样子设置容器升级的时候后会清除图标，可以可避免在缓存中保留过时的图标
-      - ./logs/:/fail2banlogs/ #在home文件夹生成log日志文件,启用fail2ban时需要
+      
+     # - ./vw-database/:/database/
+     #启用默认的数据库时启用,并注释掉下文的‘- DATABASE_URL=’,这里启用了postgresql就不启用了
+      
+      - /icon_cache/ #这样子后每次更新会清除图标，可以可避免保留过时的图标
+      - ./logs/:/fail2banlogs/ 
+      #log日志文件,启用fail2ban时需要
     restart: unless-stopped
-    depends_on:
+    depends_on: 
      - db
     ports:
       - &#34;127.0.0.1:8888:80&#34;
     environment:
-      - DOMAIN=https:// #输入你的已经解析到服务器ip地址的域名
-    # - SIGNUPS_DOMAINS_WHITELIST=gmail.com,outlook.com,hotmail.com,qq.com,foxmail.com,icloud.com #启用注册邮箱后缀限制,启用后禁止注册将失效
-      - WEB_VAULT_ENABLED=true #启用网页页面
-      - SIGNUPS_ALLOWED=false  #启用后禁止注册，管理员仍可邀请新成员；启用邮箱后缀后即使有限制也会失效
-      - SIGNUPS_VERIFY=true    #启用注册验证，即往注册帐号的邮箱发送验证
-      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN} # 启用管理员界面 
+      - DOMAIN=https://example.com #输入你自己的域名
+      
+    # - SIGNUPS_DOMAINS_WHITELIST=gmail.com,outlook.com,hotmail.com,qq.com
+      #启用后&#34;SIGNUPS_ALLOWED&#34;将失效,始终可使用下面设置的邮箱域名后缀注册
+      #如果不启用邮件服务,可设置一个其他人不知道的域名后缀来达到禁止其他人注册
+      #不过密码管理器这种东西很少有人会去一个不明网站注册一个然后拿来用吧
 
-        #  永久化的 数据映射
+      - WEB_VAULT_ENABLED=true #启用网页页面
+
+      - SIGNUPS_ALLOWED=false  
+      #启用后禁止注册，只能登录管理员页面去邀请用户,启用SIGNUPS_ALLOWED后失效
+      - SIGNUPS_VERIFY=true    
+      #启用注册验证，即往注册帐号的邮箱发送验证
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN} 
+      #启用管理员界面，https://域名/admin 登录,这些在配置文件中设置的都可以在上面再配置 
+
+        # 数据映射
       - DATA_FOLDER=/persistent 
-    # - DATABASE_URL=/database/vaultwarden.sqlite3  #使用默认数据库时启用，使用其他数据库时将此条注释掉
-      - DATABASE_URL=postgres://${DB_USER}:${DB_SECRET}@db/${DB_NAME}?sslmode=disable #使用默认数据库时，将此条注释掉
+    # - DATABASE_URL=/database/vaultwarden.sqlite3  
+    #使用默认数据库时启用，使用其他数据库时将此条注释掉
+
+      - DATABASE_URL=postgres://${DB_USER}:${DB_SECRET}@db/${DB_NAME}?sslmode=disable 
+      #使用默认数据库时，将此条注释掉
+
       - ATTACHMENTS_FOLDER=/attachments
       - ICON_CACHE_FOLDER=/icon_cache
       - ROCKET_WORKERS=20 
 
-        #启用bitwarden的push,访问https://bitwarden.com/host/ 输入邮箱注册,地区选的美国
+        #(可选)启用bitwarden的push,访问https://bitwarden.com/host/ 输入邮箱注册,地区选的美国
+        #在网页端登录过,然后下次再登录需要你重复输入密码时会多出一个用其他设备登录
+        #点击那个按钮可用在手机&#34;设置-待处理的登录请求批准登录&#34;
+        #设置完这个后,会给你手机推送一个消息,iOS亲测可用,其他系统自测
       - PUSH_ENABLED=true
       - PUSH_INSTALLATION_ID=       #将注册的id复制至此
       - PUSH_INSTALLATION_KEY=      #将注册的key复制至此
 
         #通知邮件的配置
-        # Domains: gmail.com, googlemail.com
+        #我这里使用的是自建邮箱,gmail的设置可用去官方wiki查看
       - SMTP_HOST=
       - SMTP_PORT=587
       - SMTP_SECURITY=starttls
@@ -48,24 +68,76 @@ vim docker-compose.yml
       - SMTP_USERNAME=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWD}
   
-      - SHOW_PASSWORD_HINT=false       #禁用密码提示
+      - SHOW_PASSWORD_HINT=false   #密码提示
         
-      - LOG_FILE=/fail2banlogs/vaultwarden.log          #指定日志文件
+      - LOG_FILE=/fail2banlogs/vaultwarden.log      #日志文件,配合fail2ban使用
       - LOG_LEVEL=info
       - EXTENDED_LOGGING=true
-        # - ENABLE_WEBSOCKET=false # 禁用websocket 
+        # - ENABLE_WEBSOCKET=false # 禁用websocket,建议别禁
         
   db:
-    image: postgres:15
+    image: postgres:15  #使用你喜欢的数据库
     container_name: postgres_vaultwarden
     environment:
         - POSTGRES_DB=${DB_NAME}
         - POSTGRES_USER=${DB_USER}
-        - POSTGRES_PASSWORD=${DB_SECRET} #特殊字符要特别设置转义字符，懒得折腾仅使用大小写的字母和数字
+
+        - POSTGRES_PASSWORD=${DB_SECRET} 
+        #特殊字符要特别设置转义字符，懒得折腾可用仅使用大小写的字母和数字
     volumes:
         - ./db:/var/lib/postgresql/data
     restart: unless-stopped
-</code></pre><p>修改好后键入<code>:wq</code>按下回车退出</p><h3 id=编辑env环境变量>编辑.env环境变量</h3><p>同文件夹下键入
+</code></pre><p>修改好后键入<code>:wq</code>按下回车退出</p><h3 id=使用默认sqlite的docker-composeyml文件>使用默认<code>sqlite</code>的<code>docker-compose.yml</code>文件</h3><pre tabindex=0><code>services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    volumes:
+      - ./vw-data/:/persistent/
+      - ./vw-attachments/:/attachments/
+      - ./vw-database/:/database/
+      - /icon_cache/ # 升级后会清除图标
+      - ./vw-logs/:/f2blogs/ # log日志文件位置,如果使用fail2ban需要
+    restart: unless-stopped
+    ports:
+      - &#34;127.0.0.1:8888:80&#34;
+    environment:
+        # web以及基本配置
+      - DOMAIN=https://example.com
+      - WEB_VAULT_ENABLED=true # 启用网页页面
+      - SIGNUPS_ALLOWED=false # 启用禁止注册
+      - SIGNUPS_VERIFY=true # 启用注册验证
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN} # 启用管理员界面 
+
+        #数据映射
+      - DATA_FOLDER=/persistent 
+      - ATTACHMENTS_FOLDER=/attachments
+      - DATABASE_URL=/database/vaultwarden.sqlite3
+      - ICON_CACHE_FOLDER=/icon_cache
+      - ROCKET_WORKERS=20 
+
+        #启用bitwarden的push,前提是你是用bitwarden的官方客户端
+        #如果使用keyguard(安卓)这种开源第三方客户端,不知道有没有推送
+        #ID和key访问https://bitwarden.com/host/ 填入邮箱获得,地区随便选我选了美国
+        #作用是如果你网页端登录时有用其他设备登录会有通知push到你手机
+        #iOS亲测可用,其他端没有测试过
+      - PUSH_ENABLED=true
+      - PUSH_INSTALLATION_ID=
+      - PUSH_INSTALLATION_KEY=
+        #通知邮件的配置(可选)
+      - SMTP_HOST=
+      - SMTP_PORT=
+      - SMTP_SECURITY=starttls
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_USERNAME=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWD}
+        #显示密码提示
+      - SHOW_PASSWORD_HINT=true
+
+        #日志文件,用于配合fail2ban
+      - LOG_FILE=/f2blogs/vaultwarden.log 
+      - LOG_LEVEL=info
+      - EXTENDED_LOGGING=true
+</code></pre><h3 id=编辑env环境变量>编辑<code>.env</code>环境变量</h3><p>同文件夹下键入
 <code>vim .env</code> 按<code>i</code>进入编辑模式</p><pre tabindex=0><code>VAULTWARDEN_ADMIN_TOKEN=
 DB_NAME=
 DB_USER=
@@ -73,12 +145,10 @@ DB_SECRET=
 SMTP_FROM=
 SMTP_USERNAME=
 SMTP_PASSWD=
-</code></pre><p>建议各个值都用小引号<code>‘’</code>括起来，以及<code>VAULTWARDEN_ADMIN_TOKEN</code>要避免明文,参考<a href=https://github.com/dani-garcia/vaultwarden/wiki/Enabling-admin-page>官方wiki</a>，<a href=https://rs.ppgg.in/configuration/enabling-admin-page>中文版</a>。
-配置完成后在此文件夹下运行
+</code></pre><p>如果使用默认配置则不需要在.env文件中设置数据库信息<code>"DB_"</code>的相关变量自行删除</p><p>各个值都用小引号<code>‘’</code>括起来。</p><p>如果启用管理员页面.env文件里的<code>VAULTWARDEN_ADMIN_TOKEN</code>值要避免明文,如何设置参考<a href=https://github.com/dani-garcia/vaultwarden/wiki/Enabling-admin-page>官方wiki</a>，<a href=https://rs.ppgg.in/configuration/enabling-admin-page>中文版页面</a>。</p><p>配置完成后在此文件夹下运行
 <code>docker compose up -d</code>
 以启动服务。
-可使用命令<code>docker ps</code>是否正常运行</p><h3 id=配置反向代理>配置反向代理</h3><p>需要提前安装好<code>nginx、certbot、python3-certbot-nginx</code>
-如果没有安装执行</p><pre tabindex=0><code>apt update
+可使用命令<code>docker ps</code>是否正常运行</p><h3 id=配置反向代理>配置反向代理</h3><p>需要提前安装好<code>nginx、certbot、python3-certbot-nginx</code></p><p>如果没有安装,执行:</p><pre tabindex=0><code>apt update
 apt install nginx certbot python3-certbot-nginx
 </code></pre><p>创建配置文件
 <code>vim /etc/nginx/conf.d/vaultwarden.conf</code>
@@ -89,7 +159,7 @@ apt install nginx certbot python3-certbot-nginx
 
 
 
-    client_max_body_size 525M;
+    client_max_body_size 200M;
 location / {
       proxy_set_header   X-Real-IP $remote_addr;
       proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -103,10 +173,80 @@ location / {
       
   }
 }
-</code></pre><p>编辑好后，执行<code>certbot --nginx -d example.com</code>后如果没有报错那就是已经设置上了，这时候再查看这个配置会发现被certbot自动增加上了ssl部分，打开浏览器访问你的网页吧。
-到此为止基本的安装结束了。</p><h2 id=配置fail2ban>配置fail2ban</h2><p>fail2ban可以直接照汉化过的<a href=https://rs.ppgg.in/configuration/security/fail2ban-setup>wiki</a>来。
+</code></pre><p>编辑好后，执行<code>certbot --nginx -d example.com</code>后如果没有报错那就是已经设置上了，这时候再查看这个配置会发现被certbot自动增加上了ssl部分，打开浏览器访问你的网页吧。</p><p>或者你可以用<code>cf-tunnel</code>的方式设置<code>ssl</code>,适合家里云这种配置起来麻烦的情况,可参考少数派的<a href=https://sspai.com/post/79278>这篇文章</a>，</p><p>优点是相比家里云,没有端口号小尾巴,且配置简单</p><p>缺点是可能延迟高，但这个密码库是本地存储的，只有修改密码库时要联网，对延迟要求不高,勉强能接受</p><p><strong>使用<code>cf-tunnel</code>的或者开了<code>cloudflare</code>小黄云的要去管理页面把客户端IP标头设置为<code>CF-Connecting-IP</code>否则fail2ban不会起作用</strong></p><h2 id=配置fail2ban>配置<code>fail2ban</code></h2><p><em>即输错密码<code>3</code>次后会<code>ban</code>掉<code>IP</code>一段时间</em></p><blockquote><p>fail2ban可以直接照汉化过的<a href=https://rs.ppgg.in/configuration/security/fail2ban-setup>wiki</a>来。
 假设你按官方的wiki设置了一对filter与jail规则<code>vaultwarden.local</code>(按<code>wiki</code>在对应的文件夹创建对应的文件)，执行
-<code>fail2ban-client status vaultwarden</code>查看状态</p><h2 id=设置定时备份>设置定时备份</h2><p>打字打半天累了，有空再更新吧。</p><p>按 <code>停止容器---打包文件夹---上传打包好的包文件到要保存的地方(网盘、github仓库...)---重启容器</code> 的思路创建脚本定时执行就行了。</p></article><div class="tags pb-4 pt-2"><a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E5%A4%87%E5%BF%98%E5%BD%95/>备忘录</a>
+<code>fail2ban-client status vaultwarden</code>查看状态</p></blockquote><h3 id=设置网页端的fail2ban>设置网页端的<code>fail2ban</code></h3><h4 id=在fail2ban的filterd文件夹创建规则输入以下内容vim-etcfail2banfilterdvaultwardenlocal>在<code>fail2ban</code>的<code>filter.d</code>文件夹创建规则,输入以下内容<code>vim /etc/fail2ban/filter.d/vaultwarden.local</code></h4><pre tabindex=0><code># path_f2b/filter.d/vaultwarden.local
+
+[INCLUDES]
+before = common.conf
+
+[Definition]
+failregex = ^.*?Username or password is incorrect\. Try again\. IP: &lt;ADDR&gt;\. Username:.*$
+ignoreregex =
+</code></pre><h4 id=在fail2ban的jaild文件夹创建规则输入以下内容vim-etcfail2banjaildvaultwardenlocal>在<code>fail2ban</code>的<code>jail.d</code>文件夹创建规则,输入以下内容<code>vim /etc/fail2ban/jail.d/vaultwarden.local</code></h4><pre tabindex=0><code># path_f2b/jail.d/vaultwarden.local
+
+[vaultwarden]
+enabled = true
+port = 80,443,8081
+filter = vaultwarden
+banaction = %(banaction_allports)s
+logpath = /path/to/vaultwarden.log  #你的log文件的绝对路径
+maxretry = 3
+bantime = 14400
+findtime = 14400
+</code></pre><h3 id=设置网页端admin管理界面的fail2ban>设置网页端<code>admin</code>管理界面的<code>fail2ban</code></h3><h4 id=在fail2ban的filterd文件夹创建规则输入以下内容vim-etcfail2banfilterdvaultwarden-adminlocal>在<code>fail2ban</code>的<code>filter.d</code>文件夹创建规则,输入以下内容<code>vim /etc/fail2ban/filter.d/vaultwarden-admin.local</code></h4><pre tabindex=0><code># path_f2b/filter.d/vaultwarden-admin.local
+
+[INCLUDES]
+before = common.conf
+
+[Definition]
+failregex = ^.*Invalid admin token\. IP: &lt;ADDR&gt;.*$
+ignoreregex =
+</code></pre><h4 id=在fail2ban的jaild文件夹创建规则输入以下内容vim-etcfail2banjaildvaultwarden-adminlocal>在<code>fail2ban</code>的<code>jail.d</code>文件夹创建规则,输入以下内容<code>vim /etc/fail2ban/jail.d/vaultwarden-admin.local</code></h4><pre tabindex=0><code># path_f2b/jail.d/vaultwarden-admin.local
+
+[vaultwarden-admin]
+enabled = true
+backend = pyinotify #由于我使用的系统是Debian以及我使用的是apt方式安装的fail2ban,按wiki说法这里得加这个
+port = 80,443
+filter = vaultwarden-admin
+banaction = %(banaction_allports)s
+logpath = /path/to/vaultwarden.log #你的log文件的绝对路径
+maxretry = 3
+bantime = 14400
+findtime = 14400
+</code></pre><h3 id=totp的fail2ban设置用于vaultwarden帐号设置了二次验证的><code>TOTP</code>的<code>fail2ban</code>设置,用于<code>vaultwarden</code>帐号设置了二次验证的</h3><h4 id=在fail2ban的filterd文件夹创建规则输入以下内容vim-etcfail2banfilterdvaultwarden-totplocal>在<code>fail2ban</code>的<code>filter.d</code>文件夹创建规则,输入以下内容<code>vim /etc/fail2ban/filter.d/vaultwarden-totp.local</code></h4><pre tabindex=0><code># path_f2b/filter.d/vaultwarden-totp.local
+# Fail2Ban filter for Vaultwarden TOTP
+
+[INCLUDES]
+before = common.conf
+
+[Definition]
+failregex = ^.*\[ERROR\] Invalid TOTP code! Server time: (.*) UTC IP: &lt;ADDR&gt;$
+ignoreregex =
+</code></pre><h4 id=在fail2ban的jaild文件夹创建规则输入以下内容-vim-etcfail2banjaildvaultwarden-totplocal>在<code>fail2ban</code>的<code>jail.d</code>文件夹创建规则,输入以下内容 <code>vim /etc/fail2ban/jail.d/vaultwarden-totp.local</code></h4><pre tabindex=0><code># path_f2b/jail.d/vaultwarden-totp.local
+
+[vaultwarden-totp]
+enabled = true
+backend = pyinotify #由于我使用的系统是Debian以及我使用的是apt方式安装的fail2ban,按wiki说法这里得加这个
+port = 80,443
+filter = vaultwarden-totp
+banaction = iptables-multiport[name=vaultwarden-totp, port=&#34;80,443&#34;, protocol=tcp]
+logpath = /path/to/vaultwarden.log #你的log文件的绝对路径
+maxretry = 3
+bantime = 14400
+findtime = 14400
+</code></pre><p>重启fail2ban <code>sudo systemctl restart fail2ban</code> 即可生效</p><p>查看对应的规则ban了多少IP</p><pre tabindex=0><code>#查看web登录失败封禁状况
+fail2ban-client status vaultwarden 
+#如果某个IP访问登录帐号页面并输错密码或者邮箱,3次会banIP(jail文件对应规则maxretry = 3)
+
+#查看管理员页面登录失败封禁状况
+fail2ban-client status vaultwarden-admin 
+#如果某个IP在登录管理员页面输错密码,3次会banIP(jail文件对应规则maxretry = 3)
+
+#查看二次验证输入错误封禁状况
+fail2ban-client status vaultwarden-totp
+#如果某个IP在登录vaultwarden时，输入二次验证时出错会记录,3次会banIP(jail文件对应规则maxretry = 3)
+</code></pre><p>docker安装的fail2ban可去<a href=https://rs.ppgg.in/configuration/security/fail2ban-setup#jail>wiki</a>自己研究</p><p>到此为止基本结束了。</p><h2 id=参考>参考</h2><ol><li><a href=https://rs.ppgg.in/>Vaultwarden Wiki 中文版</a></li><li><a href=https://github.com/dani-garcia/vaultwarden/wiki>Vaultwarden Wiki(官方wiki)</a></li><li><a href=https://sspai.com/post/79278>CloudFlare Tunnel 免费内网穿透的简明教程</a></li></ol></article><div class="tags pb-4 pt-2"><a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E5%A4%87%E5%BF%98%E5%BD%95/>备忘录</a>
 <a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/%E8%87%AA%E9%83%A8%E7%BD%B2/>自部署</a>
-<a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/vaultwarden/>Vaultwarden</a></div><div class=row><div class=col-md><a href=https://MrLeeYoungHoo.github.io/posts/%E5%90%8E%E7%BB%AD%E6%9B%B4%E6%96%B0/><span>previous: </span><span>后续更新</span></a></div><div class="col-md text-md-end"><a href=https://MrLeeYoungHoo.github.io/posts/mido%E5%A4%87%E5%BF%98%E5%BD%95/><span>next: </span><span>把红米note4x刷成linux小服务器</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75">yeo's blog © 2025
+<a class="badge rounded-pill text-uppercase text-bg-secondary" href=/tags/vaultwarden/>Vaultwarden</a></div><div class=row><div class=col-md></div><div class="col-md text-md-end"><a href=https://MrLeeYoungHoo.github.io/posts/mido%E5%A4%87%E5%BF%98%E5%BD%95/><span>next: </span><span>把红米note4x刷成linux小服务器</span></a></div></div></div></div><footer><div class="container mt-4 pb-1"><p class="small opacity-75">yeo's blog © 2025
 <a href="https://icp.gov.moe/?keyword=20240310" style=font-size:14px;color:gray;text-decoration:none>萌ICP备20240310</a> // powered by <a href=https://gohugo.io/>hugo</a> and <a href=https://github.com/imgios/not-much>imgios/not-much</a></p></div></footer></main><script src=https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js integrity=sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz crossorigin=anonymous></script></body></html>
